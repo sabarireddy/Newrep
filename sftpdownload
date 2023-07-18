@@ -1,4 +1,4 @@
-[root@h010sfen01n sftp-scripts]# cat euronet_usp_report_job.sh
+[root@sabari01 sftp-scripts]# cat euronet_usp_report_job.sh
 #!/bin/bash
 #
 # Description:
