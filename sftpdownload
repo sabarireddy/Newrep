@@ -1,0 +1,122 @@
+[root@h010sfen01n sftp-scripts]# cat euronet_usp_report_job.sh
+#!/bin/bash
+#
+# Description:
+# Get user, remote server, source directory with absolute path and
+# remote directory details as input to sync the latest added files
+# with remote server
+#
+# Use batch file with SFTP shell script without prompting password
+# using SFTP authorized_keys
+#
+##################################################################
+# Create SFTP batch file
+
+#set -e
+#set -x
+
+tempfile="/tmp/sftpsync.$$"
+count=0
+
+trap "/bin/rm -f $tempfile" 0 1 15
+
+#if [ $# -eq 0 ] ; then
+#  echo "Usage: $0 user host path_to_src_dir remote_dir" >&2
+#  exit 1
+#fi
+
+usage()
+{
+cat <<EOF
+Script to copy files from local SFTP server to Remote SFTP server
+  Options:
+    -s        Remote SFTP server name/IP
+    -u        Remote SFTP user to connect
+    -l        Local SFTP dircetory to copy
+    -r        Remote SFTP dircetory
+    -p        Passowrd to connect remote machine
+    -P        SSH port
+EOF
+}
+
+argcheck() {
+# if less than n argument
+if [ $ARGC -lt $1 ]; then
+  echo "Missing arguments! Use \`\`-h'' for help."
+  exit 1
+fi
+}
+
+CHECK=0
+ARGC=$#
+EXACT=0
+
+argcheck 1
+
+while getopts "hs:u:l:r:p:P:" OPTION
+do
+  case $OPTION in
+    h)
+      usage
+      ;;
+    s)
+      server="$OPTARG"
+      #CHECK=1
+      ;;
+    u)
+      user="$OPTARG"
+      #CHECK=1
+      ;;
+    l)
+      source_dir="$OPTARG"
+      #CHECK=1
+      ;;
+    r)
+      remote_dir="$OPTARG"
+      #CHECK=1
+      ;;
+    p)
+      password="$OPTARG"
+      ;;
+    P)
+      port="$OPTARG"
+      ;;
+    \?)
+      exit 1
+      ;;
+  esac
+done
+
+
+# Without source and remote dir, the script cannot be executed
+if [[ -z $remote_dir ]] || [[ -z $source_dir ]] || [[ -z $server ]] || [[ -z $user ]] || [[ -z $password ]] || [[ -z $port ]]; then
+   echo "Provide all the options to continue"
+   echo "Usage: $0 -u user -s sftp.example.com -P 2221 -l /sftp/example/source -r /sftp/example/destination -p password"
+   exit 1
+else
+
+echo "cd $remote_dir" >> $tempfile
+echo "get -rP *.* $source_dir" >> $tempfile
+echo "rm *.*" >> $tempfile
+echo "quit" >> $tempfile
+
+#echo "Synchronizing: Found files in local folder to upload."
+# Main command to use batch file with SFTP shell script without prompting password
+sshpass -p $password sftp -oBatchMode=no -b $tempfile -P $port "$user@$server"
+echo "Done. All files synchronized up with $server"
+# Create timestamp file once first set of files are uploaded
+
+
+# Archive
+archive_dir_name="archive/`date +%d%m%Y`"
+echo "Archiving..."
+cd $source_dir
+mkdir -p $archive_dir_name
+mv *.* $archive_dir_name/
+echo "Done. All files are archived in $archive_dir_name"
+
+# Remove the sftp batch file
+rm -f $tempfile
+exit 0
+
+fi
