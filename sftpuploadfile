@@ -1,0 +1,20 @@
+cat reporting_euronet_job.sh
+#!/bin/bash
+srcDirectory=/sftp/euronet/prd/reporting
+destDirectory=/sftp/reporting/euronet/
+
+cd $srcDirectory
+
+parentfilecount=$(cd "$srcDirectory" && ls -F | grep -v "/" | wc -l)
+if [ $parentfilecount -gt 0 ]; then
+        mv *.* $destDirectory/
+fi
+
+# Archive
+archive_dir_name="archive/`date +%d%m%Y`"
+echo "Archiving..."
+cd $destDirectory/
+mkdir -p $archive_dir_name
+mv *.* $archive_dir_name/
+echo "Done. All xls files are archived in $archive_dir_name"
+
